@@ -1,3 +1,4 @@
+主要对if_stage.v中，非分支预测器相关的代码进行解读
 
 取指阶段到译码阶段的总线信号定义语句如下所示，这实际上是一种把信号”打包“的做法，这样的Verilog写法，简化了例化时的接口，并且方便后续扩展信号（只需要增宽总线即可)
 >btb_xx是分支预测器相关的信号，分支预测器不是《设计实战》中要求必须实现的，但是，是高性能处理器的必备组件
@@ -74,18 +75,16 @@ assign seq_pc       =  fs_pc + 32'h4;
 assign excp_entry   = {32{excp_tlbrefill}}  & csr_tlbrentry |
                       {32{!excp_tlbrefill}} & csr_eentry    ;
 //冲刷时候，将跳转到的pc值，异常处理导致的冲刷，将跳转到异常处理返回地址开始执行，否则将从提交的指令的下一条开始重新执行
-assign inst_flush_pc = {32{ertn_flush}}                         & csr_era         |
-                       {32{refetch_flush || icacop_flush || idle_flush}} 
-										                       & (ws_pc + 32'h4) ;
+assign inst_flush_pc = {32{ertn_flush}}                                  & csr_era         |
+                       {32{refetch_flush || icacop_flush || idle_flush}} & (ws_pc + 32'h4) ;
 //各种情况下的nextpc值：按优先级从上到下依次是：1.有之前未处理的冲刷时2.有例外冲刷时3.其他冲刷时4.等待分支预测计算目标5.分支预测错误冲刷（注意，这里与上fs_valid，表明有可能存在：分支预测错误，但实际上预测错的指令没有影响（即取指阶段的指令是无效的），则不属于此种情况）6.常规分支预测跳转7.都不满足时，取顺序pc值
-assign nextpc = (flush_inst_req_state == flush_inst_req_full) ? flush_inst_req_buffer:  
-	                 excp_flush                               ? excp_entry           :
-                (ertn_flush || refetch_flush || icacop_flush || idle_flush)
-												             ? inst_flush_pc        :
-                (br_target_inst_req_state == br_target_inst_req_wait_br_target) 
-										                 ? br_target_inst_req_buffer :
-                btb_pre_error_flush && fs_valid           ? btb_pre_error_flush_target:
-                fetch_btb_target                          ? btb_ret_pc_t              :                                                                                 seq_pc;
+assign nextpc = (flush_inst_req_state == flush_inst_req_full)                   ? flush_inst_req_buffer     :
+                excp_flush                                                      ? excp_entry                :
+                (ertn_flush || refetch_flush || icacop_flush || idle_flush)     ? inst_flush_pc             :
+                (br_target_inst_req_state == br_target_inst_req_wait_br_target) ? br_target_inst_req_buffer :
+                btb_pre_error_flush && fs_valid                                 ? btb_pre_error_flush_target:
+                fetch_btb_target                                                ? btb_ret_pc_t              :
+                                                                                  seq_pc                    ;
 ```
 
 ```verilog
