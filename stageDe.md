@@ -1,81 +1,81 @@
 
 跳转总线如下所示。本设计中，跳转结果直接在译码级结果计算出来，不用到执行级再做，这能减少流水线的预测错误开销，并且方便好写。
 ```verilog
-						//本设计中，跳转结果在译码级结果计算出来、
-						//传回的跳转总线提供冲刷信息，即冲刷有效信号和目标地址
+//本设计中，跳转结果在译码级结果计算出来、
+//传回的跳转总线提供冲刷信息，即冲刷有效信号和目标地址
 assign br_bus       = {btb_pre_error_flush,           //32:32
                        btb_pre_error_flush_target     //31:0
                       };
 ```
 译码往执行级的总线信号中，包括的必要信息如下所示
 ```verilog
-						//difftest使用信号
+//difftest使用信号
 assign ds_to_es_bus = {inst_csr_rstat_en,  // 349:349 for difftest
                        inst_st_en       ,  // 348:341 for difftest
                        inst_ld_en       ,  // 340:333 for difftest
                        (inst_rdcntvl_w | inst_rdcntvh_w | inst_rdcntid_w), //332:332  for difftest
                        timer_64      ,  //331:268  for difftest
                        ds_inst       ,  //267:236  for difftest
-						//指令为idle指令
+//指令为idle指令
                        inst_idle     ,  //235:235
-						//下四个信号均为性能计数器用
+//下四个信号均为性能计数器用
                        btb_pre_error_flush, //234:234
                        br_to_btb     ,  //233:233
                        ds_icache_miss,  //232:232
                        br_inst       ,  //231:231
-						//preld是la32r定义的icache预取指令，需特殊标记
+//preld是la32r定义的icache预取指令，需特殊标记
                        inst_preld    ,  //230:230
-	                    //表明是cacop指令且有效（能作用在本处理器核，如操作L2cache就属于无效）
+//表明是cacop指令且有效（能作用在本处理器核，如操作L2cache就属于无效）
                        inst_valid_cacop,  //229:229
-	                    //表明当前是需对load结果进行符号拓展的load信号（即ld.b和ld.h),用于mem级生成ld指令的写回寄存器结果
+//表明当前是需对load结果进行符号拓展的load信号（即ld.b和ld.h),用于mem级生成ld指令的写回寄存器结果
                        mem_sign_exted,  //228:228
-						//页表无效指令，需标记起来一直传到写回级操作页表
+//页表无效指令，需标记起来一直传到写回级操作页表
                        inst_invtlb   ,  //227:227
-						//页表读取指令，需标记起来一直传到写回级操作页表
+//页表读取指令，需标记起来一直传到写回级操作页表
                        inst_tlbrd    ,  //226:226
-						//与tlb/ibar指令相关的refetch指令，一直传回到写回级生成refetch信号
+//与tlb/ibar指令相关的refetch指令，一直传回到写回级生成refetch信号
                        refetch       ,  //225:225
-						//页表填充指令，需标记起来一直传到写回级操作页表
+//页表填充指令，需标记起来一直传到写回级操作页表
                        inst_tlbfill  ,  //224:224
-						//页表写指令，需标记起来一直传到写回级操作页表
+//页表写指令，需标记起来一直传到写回级操作页表
                        inst_tlbwr    ,  //223:223
-						//页表搜寻指令，需标记起来一直传到写回级操作页表
+//页表搜寻指令，需标记起来一直传到写回级操作页表
                        inst_tlbsrch  ,  //222:222
-						//一对原子访存指令，需标记至访存级
+//一对原子访存指令，需标记至访存级
                        inst_sc_w     ,  //221:221
                        inst_ll_w     ,  //220:220
-						//例外信号，这里相比于取指到译码的总线，因可能的例外随着流水级增高而增多，位宽增加
+//例外信号，这里相比于取指到译码的总线，因可能的例外随着流水级增高而增多，位宽增加
                        excp_num      ,  //219:211
-						//csr相关信号，写csr相关放到写回去做，所以要一直传下去
+//csr相关信号，写csr相关放到写回去做，所以要一直传下去
                        csr_mask      ,  //210:210
                        csr_we        ,  //209:209
                        csr_idx       ,  //208:195
                        res_from_csr  ,  //194:194
                        csr_data      ,  //193:162
-						//表明是ertn指令，需要标记起来传递到写回级，供写回级发出冲刷信号
+//表明是ertn指令，需要标记起来传递到写回级，供写回级发出冲刷信号
                        inst_ertn     ,  //161:161
-						//表明发生例外，需要标记起来传递到写回级，供写回级发出冲刷信号
+//表明发生例外，需要标记起来传递到写回级，供写回级发出冲刷信号
                        excp          ,  //160:160
-						//标记访存指令访存字节数的信号，需要传递到访存级
+//标记访存指令访存字节数的信号，需要传递到访存级
                        mem_size      ,  //159:158
-						//将用以区分各种乘/除指令的详细信息传递
+//将用以区分各种乘/除指令的详细信息传递
                        mul_div_op    ,  //157:154
                        mul_div_sign  ,  //153:153
-						//将用以区分各种alu指令的详细信息传递
+//将用以区分各种alu指令的详细信息传递
                        alu_op        ,  //152:139
-						//表明当前指令是加载指令
+//表明当前指令是加载指令
                        load_op       ,  //138:138 bug2 load_op
-						//一系列表明源操作数来源的信号，源操作数的生成是在执行级做的
+//一系列表明源操作数来源的信号，源操作数的生成是在执行级做的
                        src1_is_pc    ,  //137:137
                        src2_is_imm   ,  //136:136
                        src2_is_4     ,  //135:135
-						//写寄存器使能信号，一直传到写回级
+//写寄存器使能信号，一直传到写回级
                        gr_we         ,  //134:134
-						//表明当前指令是存储指令
+//表明当前指令是存储指令
                        store_op      ,  //133:133
-						//目标写寄存器，一直传到写回级
+//目标写寄存器，一直传到写回级
                        dest          ,  //132:128
-						//可能的四个源操作数来源，传递到执行级：立即数，两个寄存器值，pc的值
+//可能的四个源操作数来源，传递到执行级：立即数，两个寄存器值，pc的值
                        ds_imm        ,  //127:96
                        rj_value      ,  //95 :64
                        rkd_value     ,  //63 :32
@@ -93,15 +93,15 @@ assign ds_allowin     = !ds_valid || ds_ready_go && es_allowin;
 assign ds_to_es_valid = ds_valid && ds_ready_go;
 always @(posedge clk) begin   //bug1 no reset; branch no delay slot
     if (reset || flush_sign) begin
-		//流水线冲刷无条件置低valid
+//流水线冲刷无条件置低valid
         ds_valid <= 1'b0;
     end
     else begin 
         if (ds_allowin) begin   //bug2 ??
-			//当该分支指令向后流动的那一拍，即（btb_pre_error_flush && es_allowin）为1时，若下一拍下一条指令紧接着进入译码级，则可直接取消。
-			//不过可以用更粗犷的方法，即下一拍的ds_valid直接为0，无需识别是否有指令进入
-			//同样的条件，若下一拍无指令进入，即当拍fs_to_ds_valid为0，则置起branch_slot_cancel触发器。
-			//该触发器为1时，会等待下一条指令进入，当检测fs_to_ds_valid为1时，将其取消，并恢复branch_slot_cancel至0。
+//当该分支指令向后流动的那一拍，即（btb_pre_error_flush && es_allowin）为1时，若下一拍下一条指令紧接着进入译码级，则可直接取消。
+//不过可以用更粗犷的方法，即下一拍的ds_valid直接为0，无需识别是否有指令进入
+//同样的条件，若下一拍无指令进入，即当拍fs_to_ds_valid为0，则置起branch_slot_cancel触发器。
+//该触发器为1时，会等待下一条指令进入，当检测fs_to_ds_valid为1时，将其取消，并恢复branch_slot_cancel至0。
             if ((btb_pre_error_flush && es_allowin) || branch_slot_cancel) begin
                 ds_valid <= 1'b0;
             end
@@ -218,22 +218,22 @@ regfile u_regfile(
 >有流水线级的CPU实现中，一大错误来源就是数据冒险冲突没有处理好，读者自行实现时，发现写回的计算结果错误而debug的时候不妨先看看源操作数是不是都对了，如果有错误，就可以看看是不是数据冲突问题（这里说的是比较广义的，不止是寄存器冲突，还包括流水线没把应该传递的结果在**那一拍**传递到等）
 
 ```verilog
-	  //注意各个数据冲突总线，除了包含使能、寄存器号、写的数据三个写寄存器的内容外，还包括了“需要暂停”这一信息
-	  //执行级无法在执行级当拍得到写寄存器的结果的时候，如果产生冲突就会需要停顿，在本实现中，为：乘法操作，除法操作和load操作
+//注意各个数据冲突总线，除了包含使能、寄存器号、写的数据三个写寄存器的内容外，还包括了“需要暂停”这一信息
+ //执行级无法在执行级当拍得到写寄存器的结果的时候，如果产生冲突就会需要停顿，在本实现中，为：乘法操作，除法操作和load操作
 assign {es_dep_need_stall,
         es_forward_enable, 
         es_forward_reg   ,
         es_forward_data
        } = es_to_ds_forward_bus;
-       //访存级主要是无法在到达访存级当拍得到访存结果的时候（dcache缺失），如果产生冲突就会需要停顿
+ //访存级主要是无法在到达访存级当拍得到访存结果的时候（dcache缺失），如果产生冲突就会需要停顿
 assign {ms_dep_need_stall,
         ms_forward_enable, 
         ms_forward_reg   ,
         ms_forward_data
        } = ms_to_ds_forward_bus;
 //exe stage first forward
-		//“打包”的赋值语句写法，比较简洁
-		//注意冲突有效还要注意该条指令是不是真的需要读寄存器值，即inst_need_r*
+//“打包”的赋值语句写法，比较简洁
+//注意冲突有效还要注意该条指令是不是真的需要读寄存器值，即inst_need_r*
 		//
 assign {rf1_forward_stall, rj_value, rj_value_forward_es} = ((rf_raddr1 == es_forward_reg) && es_forward_enable && inst_need_rj) ? {es_dep_need_stall, es_forward_data, es_forward_data} :
                                                             ((rf_raddr1 == ms_forward_reg) && ms_forward_enable && inst_need_rj) ? {ms_dep_need_stall || br_need_reg_data, ms_forward_data, rf_rdata1} :
