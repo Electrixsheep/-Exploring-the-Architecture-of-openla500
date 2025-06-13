@@ -1,8 +1,10 @@
 dcache_req_or_inst_en是一条重要的控制信号，反映了当前周期，执行级的指令是否应该
+
 1.产生效果，主要体现在其控制一系列访存（即对cache产生影响）的操作中，openla500的实现中，这些操作会在执行级产生影响，所以需要该控制信号，防止有多余/错误的影响（即，按理来说“不应该”产生的影响产生了）。dcache_req_or_inst_en能控制的信号包括：
 - data_valid
 - icacop_op_en/dcacop_op_en
 - preld_en
+
 2.往后流水，dcache_req_or_inst_en是执行级ready逻辑的重要部分
 ```verilog
 assign dcache_req_or_inst_en = es_valid && !excp && ms_allowin && !es_flush_sign && !ms_flush;
@@ -157,7 +159,7 @@ assign excp_ale        = access_mem & ((es_mem_size[0] &  1'b0)                 
 assign excp            = es_excp || excp_ale;
 assign excp_num        = {excp_ale, es_excp_num};
 ```
-
+与一般访存(ld/st)有关的信号逻辑如下
 ```verilog
 //sram
 //生成访存位掩码信号，用于支持.b .h类型的st指令
